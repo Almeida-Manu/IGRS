@@ -7,7 +7,7 @@ services:
     ports:
       - "5060:5060/udp"
       - "5060:5060/tcp"
-      - "8080:8080"
+      - "5080:8080"
     networks:
       - sipnet
     hostname: acme.operador
@@ -48,13 +48,13 @@ services:
     container_name: terminal
     hostname: sipnet.terminal
     environment:
-      - DISPLAY=$DISPLAY
+      - DISPLAY=${DISPLAY_VAR}
     networks:
       - sipnet
     ports:
       - "5900:5900"
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${X11_VOLUME}:/tmp/.X11-unix
     ipc: host
     privileged: true
     depends_on:
