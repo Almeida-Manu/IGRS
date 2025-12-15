@@ -1,41 +1,41 @@
 services:
-  kamailio_acme:
+  acme_operador:
     build:
       context: .
-      dockerfile: kamailio_acme.Dockerfile
-    container_name: kamailio_acme
+      dockerfile: acme_operador.Dockerfile
+    container_name: acme_operador
+    networks:
+      - acmenet
+    hostname: acme.operador
     ports:
       - "5060:5060/udp"
       - "5060:5060/tcp"
       - "5080:8080"
-    networks:
-      - sipnet
-    hostname: acme.operador
     environment:
       - SIP_DOMAIN=acme.operador
-      - DB_HOST=db_acme
+      - DB_HOST=acme_db
       - POSTGRES_USER=kamailio
       - POSTGRES_PASSWORD=kamailiopw
       - POSTGRES_DB=kamailio
       - WITH_DB=yes
-      - DB_URL=postgres://kamailio:kamailiopw@db_acme:5432/kamailio
+      - DB_URL=postgres://kamailio:kamailiopw@acme_db:5432/kamailio
       - WITH_KEMI=python
     volumes:
       - ./config/kamailio.cfg:/etc/kamailio/kamailio.cfg:ro
-      - ./scripts/redial_service.py:/etc/kamailio/redial_service.py:ro
-      - ./scripts/db_entrypoint.sh:/entrypoint.sh
-    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+      - ./src/redial_service.py:/etc/kamailio/redial_service.py:ro
+    command: /usr/sbin/kamailio -DD -E -f /etc/kamailio/kamailio.cfg
     depends_on:
-      - db_acme
+      - acme_db
     restart: unless-stopped
 
-  db_acme:
+  acme_db:
     image: postgres:15-alpine
-    container_name: db_acme
+    container_name: acme_db
     networks:
-      - sipnet
+      - acmenet
+    hostname: acme.db
     environment:
-      - DB_HOST=db_acme
+      - DB_HOST=acme_db
       - POSTGRES_USER=kamailio
       - POSTGRES_PASSWORD=kamailiopw
       - POSTGRES_DB=kamailio
@@ -43,14 +43,14 @@ services:
       - db_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  terminal:
-    image: igrs_grlt:04
-    container_name: terminal
-    hostname: sipnet.terminal
+  acme_terminal:
+    image: rodrigolf80/igrs:04
+    container_name: acme_terminal
+    networks:
+      - acmenet
+    hostname: acme.terminal
     environment:
       - DISPLAY=$DISPLAY
-    networks:
-      - sipnet
     ports:
       - "5900:5900"
     volumes:
@@ -58,11 +58,11 @@ services:
     ipc: host
     privileged: true
     depends_on:
-      - kamailio_acme
+      - acme_operador
     restart: unless-stopped
 
 networks:
-  sipnet:
+  acmenet:
     driver: bridge
 
 volumes:

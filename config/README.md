@@ -1,2 +1,0 @@
-# /config
-> custom Kamailio config
