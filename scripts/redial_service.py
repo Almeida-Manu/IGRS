@@ -66,7 +66,7 @@ def sip_route(msg):
 
     # Handle REGISTER
     if method == 'REGISTER':
-        kamailio.registrar.save('location')
+        kamailio.registrar.save('location', 0)
         kamailio.sl.send_reply(200, 'OK')
         return 1
 

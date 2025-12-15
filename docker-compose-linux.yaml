@@ -48,11 +48,14 @@ services:
     container_name: terminal
     hostname: sipnet.terminal
     environment:
-      - DISPLAY=host.docker.internal:0
+      - DISPLAY=$DISPLAY
     networks:
       - sipnet
     ports:
       - "5900:5900"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    ipc: host
     privileged: true
     depends_on:
       - kamailio_acme
