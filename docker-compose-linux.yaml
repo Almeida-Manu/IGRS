@@ -15,8 +15,11 @@ services:
       - WITH_KEMI=python
     volumes:
       - ./config/kamailio.cfg:/etc/kamailio/kamailio.cfg:ro
-      #- ./src/redial_service.py:/etc/kamailio/redial_service.py:ro
-    command: /usr/sbin/kamailio -DD -E -f /etc/kamailio/kamailio.cfg
+      - ./src/redial_service.py:/etc/kamailio/redial_service.py:ro
+    user: root
+    command: >
+      sh -c "mkdir -p /var/run/kamailio && chown kamailio:kamailio /var/run/kamailio && /usr/sbin/kamailio -DD -E -f /etc/kamailio/kamailio.cfg"
+    #command: /usr/sbin/kamailio -DD -E -f /etc/kamailio/kamailio.cfg
     restart: unless-stopped
 
   acme_terminal:
