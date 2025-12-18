@@ -17,7 +17,7 @@ def sip_route(msg):
 
     kamailio.info(f'Processing {method} from {from_uri}\n')
 
-    # 1. Handle REGISTER
+    # Handle REGISTER
     if method == 'REGISTER':
         if from_domain == ACME_DOMAIN:
             kamailio.registrar.save('location', 0)
@@ -26,15 +26,15 @@ def sip_route(msg):
             kamailio.sl.send_reply(403, 'Forbidden')
         return 1
 
-    # 2. Handle In-Dialog Requests (ACK, BYE)
+    # Handle In-Dialog Requests (ACK, BYE)
     # If the request has a Route header (loose routing), simply relay it.
     if kamailio.rr.loose_route() == 1:
         kamailio.tm.t_relay()
         return 1
 
-    # 3. Handle INVITE (Initial Calls)
+    # Handle INVITE (Initial Calls)
     if method == 'INVITE':
-        # Check domain security
+        # Check domain security match
         if from_domain != ACME_DOMAIN:
             kamailio.warn(f'Request from unauthorized domain: {from_domain}\n')
             kamailio.sl.send_reply(403, 'Forbidden')
@@ -51,12 +51,11 @@ def sip_route(msg):
             kamailio.sl.send_reply(404, 'User Not Found')
         return 1
 
-    # 4. Handle any transaction stateful ACKs that didn't match loose_route
+    # Handle any transaction stateful ACKs that didn't match loose_route
     if method == 'ACK':
         kamailio.tm.t_relay()
         return 1
 
-    # Default: drop others
     return 1
 
 def app_failure_route(msg):
@@ -66,7 +65,7 @@ def app_failure_route(msg):
     kamailio.info(f'Failure route triggered. Status: {status} for {to_uri}\n')
 
     if status in ['486', '408', '603']:
-        # Your redial logic here
+        #TODO: implement
         pass
 
     return 1
