@@ -10,15 +10,8 @@ services:
     ports:
       - "5060:5060/udp"
       - "5060:5060/tcp"
-      - "5080:8080"
     environment:
       - SIP_DOMAIN=acme.operador
-      - DB_HOST=acme_db
-      - POSTGRES_USER=kamailio
-      - POSTGRES_PASSWORD=kamailiopw
-      - POSTGRES_DB=kamailio
-      - WITH_DB=yes
-      - DB_URL=postgres://kamailio:kamailiopw@acme_db:5432/kamailio
       - WITH_KEMI=python
     volumes:
       - ./config/kamailio.cfg:/etc/kamailio/kamailio.cfg:ro
@@ -28,23 +21,8 @@ services:
       - acme_db
     restart: unless-stopped
 
-  acme_db:
-    image: postgres:15-alpine
-    container_name: acme_db
-    networks:
-      - acmenet
-    hostname: acme.db
-    environment:
-      - DB_HOST=acme_db
-      - POSTGRES_USER=kamailio
-      - POSTGRES_PASSWORD=kamailiopw
-      - POSTGRES_DB=kamailio
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    restart: unless-stopped
-
   acme_terminal:
-    image: rodrigolf80/igrs:04
+    image: rodrigolf80/igrs:05
     container_name: acme_terminal
     networks:
       - acmenet
