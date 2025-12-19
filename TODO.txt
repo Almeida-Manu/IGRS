@@ -1,0 +1,1 @@
+[ ] DEREGISTER not removing user from htable
