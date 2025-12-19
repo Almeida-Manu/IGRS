@@ -16,9 +16,9 @@ services:
     volumes:
       - ./config/kamailio.cfg:/etc/kamailio/kamailio.cfg:ro
       - ./src/redial_service.py:/etc/kamailio/redial_service.py:ro
-    command: /usr/sbin/kamailio -DD -E -f /etc/kamailio/kamailio.cfg
-    depends_on:
-      - acme_db
+    user: root
+    command: >
+      sh -c "mkdir -p /var/run/kamailio && chown kamailio:kamailio /var/run/kamailio && /usr/sbin/kamailio -DD -E -f /etc/kamailio/kamailio.cfg"
     restart: unless-stopped
 
   acme_terminal:
@@ -38,6 +38,3 @@ services:
 networks:
   acmenet:
     driver: bridge
-
-volumes:
-  db_data:
