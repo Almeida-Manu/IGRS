@@ -1,0 +1,11 @@
+[ ] Service
+  [ ] cleanup prints
+  [ ] fix app_reply_route logic
+  [ ] app_error_route: better error handling (486, 408) according to requirements (auto-retries rapidly on busy, auto-retries on no answer/timeout to ensure connection)
+  [ ] status active/available/unavailable
+  [ ] ACTIVATE / DEACTIVATE
+[ ] Metrics
+  [ ] KPIs charge and measure for user caller call duration
+  [ ] gNMI management metrics agent
+[ ] Security
+  [ ] check if caller is in user's list?

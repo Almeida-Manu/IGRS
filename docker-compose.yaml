@@ -16,10 +16,27 @@ services:
     volumes:
       - ./config/kamailio.cfg:/etc/kamailio/kamailio.cfg:ro
       - ./src/redial_service.py:/etc/kamailio/redial_service.py:ro
+      - kamailio_socket:/var/run/kamailio # expose socket for kpi agent access
     user: root
     command: >
       sh -c "mkdir -p /var/run/kamailio && chown kamailio:kamailio /var/run/kamailio && /usr/sbin/kamailio -DD -E -f /etc/kamailio/kamailio.cfg"
     restart: unless-stopped
+
+  acme_gnmi:
+    image: acme_operador:latest
+    build:
+      context: .
+      dockerfile: acme_operador.Dockerfile
+    container_name: acme_gnmi
+    networks:
+      - acmenet
+    volumes:
+      - kamailio_socket:/var/run/kamailio # mnt volume for socket access on SIP server
+      - ./src/gnmi_agent.py:/gnmi_agent.py
+    user: root
+    depends_on:
+      - acme_operador
+    command: /usr/bin/python3 /gnmi_agent.py
 
   acme_terminal:
     image: rodrigolf80/igrs:05
@@ -38,3 +55,6 @@ services:
 networks:
   acmenet:
     driver: bridge
+
+volumes:
+  kamailio_socket:

@@ -14,4 +14,4 @@ RUN apt-get update && apt-get install -y \
 
 ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libpython3.8.so.1.0
 
-CMD ["/usr/sbin/kamailio", "-DD", "-E", "-f", "/etc/kamailio/kamailio.cfg"]
+#CMD ["/usr/sbin/kamailio", "-DD", "-E", "-f", "/etc/kamailio/kamailio.cfg"]
