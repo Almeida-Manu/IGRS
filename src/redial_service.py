@@ -1,5 +1,4 @@
 import sys
-import time
 import json
 import KSR as kamailio
 
@@ -68,7 +67,7 @@ def child_init(rank):
 # Main route for SIP connections
 def sip_route(msg):
     from_domain = kamailio.pv.get('$fd')
-    to_domain = kamailio.pv.get('$rd')
+    # to_domain = kamailio.pv.get('$rd')
 
     # Block external domain traffic
     if from_domain != ACME_DOMAIN:
@@ -88,10 +87,10 @@ def sip_route(msg):
         return handle_invite()
     elif method == 'ACK':
         return handle_ack()
-    elif method == 'BYE':
-        return handle_bye()
     elif method == 'CANCEL':
         return handle_cancel()
+    elif method == 'BYE':
+        return handle_bye()
 
     kamailio.sl.send_reply(405, 'Method Not Allowed')
     return 1
@@ -103,20 +102,11 @@ def handle_ack():
 
 
 def handle_cancel():
-    kamailio.info(f'CANCEL: {kamailio.pv.get("$ru")}')
     kamailio.tm.t_relay()
     return 1
 
 
 def handle_bye():
-    # Detect Call End
-    caller = kamailio.pv.get('$fU')
-    callee = kamailio.pv.get('$tU')
-
-    kamailio.info(f'DIALOG: Call Ended {caller} <-> {callee}\n')
-    update_user_status(caller, 'Available')
-    update_user_status(callee, 'Available')
-
     kamailio.tm.t_relay()
     return 1
 
@@ -212,54 +202,78 @@ def handle_message():
 
 
 def handle_invite():
-    f_user = kamailio.pv.get('$fU')  # Caller
-    target_user = kamailio.pv.get('$rU')  # Callee
+    caller = kamailio.pv.get('$fU')
+    callee = kamailio.pv.get('$rU')
 
-    # 1. Check if Target is already OnCall
-    target_str = kamailio.htable.sht_get(HT_AOR, target_user)
+    kamailio.info(f'INVITE: Attempt {caller} -> {callee}\n')
+
+    # Block if callee already OnCall
+    target_str = kamailio.htable.sht_get(HT_AOR, callee)
     if target_str:
-        try:
-            t_data = json.loads(target_str)
-            # if target is OnCall, reject immediately (Busy)
-            if t_data.get('status') == 'OnCall':
-                kamailio.info(f'INVITE: Blocked. {target_user} is OnCall.\n')
-                kamailio.sl.send_reply(486, 'Busy Here (OnCall)')
-                return 1
-        except:
-            pass
+        t_data = json.loads(target_str)
+        if t_data.get('status') == 'OnCall':
+            kamailio.info(f'INVITE: {callee} is OnCall\n')
+            kamailio.sl.send_reply(486, 'Busy Here')
+            return 1
 
-    # Check Redial Logic Armed
-    # We check the CALLER's data. If they have the Redial Service Active
-    # AND they are calling one of their targets, we arm the failure route.
-    caller_str = kamailio.htable.sht_get(HT_AOR, f_user)
+    # Create dialog
+    kamailio.setflag(4)
+
+    # Store dialog variables
+    kamailio.pv.sets('$dlg_var(caller)', caller)
+    kamailio.pv.sets('$dlg_var(callee)', callee)
+
+    # Redial arming
+    caller_str = kamailio.htable.sht_get(HT_AOR, caller)
     if caller_str:
-        try:
-            c_data = json.loads(caller_str)
-            if c_data.get('state') == 'Active' and target_user in c_data.get('targets', []):
-                kamailio.info(f'SERVICE: Redial ARMED for {f_user} -> {target_user}\n')
-                kamailio.pv.seti('$avp(redial_count)', 0)
-                kamailio.tm.t_on_failure('app_failure_route')
-        except:
-            pass
-
-    # Arm the Reply Route to catch the 200 OK (Call Start)
-    kamailio.tm.t_on_reply('app_reply_route')
+        c_data = json.loads(caller_str)
+        if c_data.get('state') == 'Active' and callee in c_data.get('targets', []):
+            kamailio.pv.seti('$avp(redial_count)', 0)
+            kamailio.tm.t_on_failure('app_failure_route')
 
     kamailio.registrar.lookup('location')
     kamailio.tm.t_relay()
     return 1
 
 
+def cleanup_on_bye(msg):
+    caller = kamailio.pv.get('$dlg_var(caller)')
+    callee = kamailio.pv.get('$dlg_var(callee)')
+
+    kamailio.info(f'DIALOG: Ended {caller} <-> {callee}\n')
+
+    if caller:
+        update_user_status(caller, 'Available')
+    if callee:
+        update_user_status(callee, 'Available')
+    return 1
+
+
+#TODO: this is not triggering
+def dlg_end(msg):
+    caller = kamailio.pv.get('$dlg_var(caller)')
+    callee = kamailio.pv.get('$dlg_var(callee)')
+
+    kamailio.info(f'DIALOG: Ended {caller} <-> {callee}\n')
+
+    update_user_status(caller, 'Available')
+    update_user_status(callee, 'Available')
+
+    return 1
+
+
 def app_reply_route(msg):
-    status = int(kamailio.pv.get('$rs'))
-    method = kamailio.pv.get('$rm')
+    reply_status = str(kamailio.pv.get('$rs'))
+    method = kamailio.pv.get('$cs')
 
+    kamailio.info(f'app_reply_route triggered status[{reply_status}] method[{method}]\n')
     # Detect Call Answer (200 OK to INVITE)
-    if method == 'INVITE' and status == 200:
-        caller = kamailio.pv.get('$fU')
-        callee = kamailio.pv.get('$tU')
+    if reply_status == '200':
+        caller = kamailio.pv.get('$dlg_var(caller)')
+        callee = kamailio.pv.get('$dlg_var(callee)')
 
-        kamailio.info(f'DIALOG: Call Established {caller} <-> {callee}\n')
+        kamailio.info(f'DIALOG: Established {caller} <-> {callee}\n')
+
         update_user_status(caller, 'OnCall')
         update_user_status(callee, 'OnCall')
 
@@ -267,17 +281,16 @@ def app_reply_route(msg):
 
 
 def app_failure_route(msg):
-    status = kamailio.pv.get('$rs')
-
-    # Redial on Network Errors (408, 480, 500, 503)
-    # Dont redial on call reject (486)
+    failure_status = str(kamailio.pv.get('$rs'))
 
     should_redial = False
 
-    if status in ['408', '480', '503', '500']:
+    # Redial on Network Errors (408, 480, 500, 503)
+    # Dont redial on call reject (486)
+    if failure_status in ['408', '480', '503', '500']:
         should_redial = True
         kamailio.info(f'FAILURE: Network/Timeout error ({status}). Retry warranted.\n')
-    elif status == '486':
+    elif failure_status == '486':
         kamailio.info('FAILURE: Destination Busy (486). Stopping Redial.\n')
         should_redial = False
 
