@@ -238,6 +238,8 @@ def handle_invite():
 
 
 def cleanup_on_bye(msg):
+    #caller = kamailio.pv.get('$fU')
+    #callee = kamailio.pv.get('$tU')
     caller = kamailio.pv.get('$dlg_var(caller)')
     callee = kamailio.pv.get('$dlg_var(callee)')
 
@@ -250,24 +252,19 @@ def cleanup_on_bye(msg):
     return 1
 
 
-# TODO: this is not triggering
-def dlg_end(msg):
-    caller = kamailio.pv.get('$dlg_var(caller)')
-    callee = kamailio.pv.get('$dlg_var(callee)')
-
-    kamailio.info(f'DIALOG: Ended {caller} <-> {callee}\n')
-
-    update_user_status(caller, 'Available')
-    update_user_status(callee, 'Available')
-
-    return 1
+# TODO: this is not triggering, why?
+# def dlg_end(msg):
+# caller = kamailio.pv.get('$dlg_var(caller)')
+# callee = kamailio.pv.get('$dlg_var(callee)')
+# kamailio.info(f'DIALOG: Ended {caller} <-> {callee}\n')
+# update_user_status(caller, 'Available')
+# update_user_status(callee, 'Available')
+# return 1
 
 
 def app_reply_route(msg):
     reply_status = str(kamailio.pv.get('$rs'))
-    method = kamailio.pv.get('$cs')
 
-    kamailio.info(f'app_reply_route triggered status[{reply_status}] method[{method}]\n')
     # Detect Call Answer (200 OK to INVITE)
     if reply_status == '200':
         caller = kamailio.pv.get('$dlg_var(caller)')
@@ -288,7 +285,7 @@ def app_failure_route(msg):
 
     # Redial on Network Errors (408, 480, 500, 503)
     # Also redial on call reject/busy (486)
-    if failure_status in ['408', '480', '486', '503', '500']:
+    if failure_status in ['408', '480', '500', '503']:
         should_redial = True
         kamailio.info(f'FAILURE: Network/Timeout error ({failure_status})\n')
     elif failure_status == '486':

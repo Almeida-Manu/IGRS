@@ -4,8 +4,9 @@ import json
 import re
 import sys
 
-TABLES = {'kpi': 'system_metrics', 'calls': 'live_calls', 'aor': 'user_profiles'}
-UPDATE_TIME = 5 # seconds
+TABLES = {'kpi': 'system_metrics', 'aor': 'user_profiles'}
+UPDATE_TIME = 5  # seconds
+
 
 def fetch_table(table_name):
     """Run kamcmd to dump a specific hash table."""
@@ -58,23 +59,14 @@ def parse_kamcmd_output(raw_text):
 
 
 def main():
-    print('Initialising KPI AGENT (gNMI simulation)...')
+    print('Initialising KPI AGENT (Strict Mode)...')
     time.sleep(UPDATE_TIME)
 
     while True:
         telemetry_data = {'timestamp': time.time(), 'source': 'acme.operador', 'system': 'redial_2.0', 'metrics': {}}
 
         for table_kamailio, label_json in TABLES.items():
-            table_data = fetch_table(table_kamailio)
-            telemetry_data['metrics'][label_json] = table_data
-
-        total_billed = 0
-        users = telemetry_data['metrics'].get('user_profiles', {})
-        for user, profile in users.items():
-            if isinstance(profile, dict):
-                total_billed += profile.get('billed_seconds', 0)
-
-        telemetry_data['metrics']['system_metrics']['global_billed_seconds'] = total_billed
+            telemetry_data['metrics'][label_json] = fetch_table(table_kamailio)
 
         print(f'\n--- [gNMI TELEMETRY] ---', flush=True)
         print(json.dumps(telemetry_data, indent=4), flush=True)

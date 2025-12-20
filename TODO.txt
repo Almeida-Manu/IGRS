@@ -1,5 +1,5 @@
-[ ] Service
-  [ ] test state ACTIVATE/DEACTIVATE
-  [ ] fix proper user target lists according to requirements
-[ ] Security
-  [ ] check if caller is in user's list?
+[ ] redial ACTIVATE / DEACTIVATE should be like Alice ACTIVATE bob and now bob can redial on alice using failure route, so we need a target list for active users, not a state active/inactive
+
+[ ] Valid gNMI path modeling for metrics instead of rawdogging socket jsondump
+
+[ ] Cleanup code struct + comments 
