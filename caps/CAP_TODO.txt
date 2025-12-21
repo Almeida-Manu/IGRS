@@ -16,9 +16,9 @@
 
 [ ] 9. Message DEACTIVATE
 
-[ ] 10. Call busy no redial
+[x] 10. Call busy no redial
 
-[ ] 11. Call busy do perform redial with busy every time
+[x] 11. Call busy do perform redial with busy every time
 
-[ ] 12. Call busy do perform redial with pick up at 2nd redial
+[x] 12. Call busy do perform redial with pick up at 2nd redial
 
