@@ -39,7 +39,7 @@ services:
     command: /usr/bin/python3 /gnmi_agent.py
 
   acme_terminal:
-    image: rodrigolf80/igrs:05
+    image: rodrigolf80/igrs_terminal:latest
     container_name: acme_terminal
     networks:
       - acmenet

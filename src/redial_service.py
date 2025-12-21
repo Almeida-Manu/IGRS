@@ -66,12 +66,15 @@ def child_init(rank):
 # ---- Routing ----
 # Main route for SIP connections
 def sip_route(msg):
-    from_domain = kamailio.pv.get('$fd')
-    # to_domain = kamailio.pv.get('$rd')
-
     # Block external domain traffic
+    from_domain = kamailio.pv.get('$fd')
+    to_domain = kamailio.pv.get('$rd')
     if from_domain != ACME_DOMAIN:
         kamailio.warn(f'ROUTE: Blocked access from {from_domain}\n')
+        kamailio.sl.send_reply(403, 'Forbidden - Domain Not Allowed')
+        return 1
+    if to_domain != ACME_DOMAIN:
+        kamailio.warn(f'ROUTE: Blocked access to {to_domain}\n')
         kamailio.sl.send_reply(403, 'Forbidden - Domain Not Allowed')
         return 1
 
@@ -220,13 +223,14 @@ def handle_invite():
             kamailio.pv.seti('$avp(redial_count)', 0)
             kamailio.tm.t_on_failure('app_failure_route')
 
-    # Create dialog
     # TODO: is this code wrong, and why dial_end is not triggering?
     kamailio.setflag(4)
 
-    # Store dialog variables
     kamailio.pv.sets('$dlg_var(caller)', caller)
     kamailio.pv.sets('$dlg_var(callee)', callee)
+
+    update_user_status(caller, 'OnCall')
+    update_user_status(callee, 'OnCall')
 
     kamailio.registrar.lookup('location')
     kamailio.tm.t_relay()
@@ -325,4 +329,10 @@ def app_failure_route(msg):
             return 1
         else:
             kamailio.info('SERVICE: Max redials reached. Giving up.\n')
+
+    caller = kamailio.pv.get('$dlg_var(caller)')
+    callee = kamailio.pv.get('$dlg_var(callee)')
+    update_user_status(caller, 'Available')
+    update_user_status(callee, 'Available')
+
     return 1
