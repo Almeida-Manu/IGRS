@@ -1,10 +1,10 @@
-[ ] 1. Register working valid domain, success
+[x] 1. Register working valid domain, success
 
-[ ] 2. Register not working for invalid domain, failure
+[x] 2. Register not working for invalid domain, failure
 
-[ ] 3. Deregister working valid domain, success
+[x] 3. Deregister working valid domain, success
 
-[ ] 4. Deregister not working for invalid domain, failure
+[x] 4. Deregister not working for invalid domain, failure
 
 [ ] 5. Fail call to domain not registered, failure
 
