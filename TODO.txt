@@ -1,0 +1,20 @@
+--- Must ----
+
+[ ] Record packet captures wireshark
+Note: quick and easy
+
+[ ] Move current code to dev branch, and cleanup commented parts on main branch before delivery
+Note: quick and easy
+
+----  ----
+
+
+---- Extra ----
+
+[ ] Fix dialog module for calls instead of manual cleanup_bye
+Note: maybe some function from the module needs to be run in cfg or python service that is missing currently? Tried plenty always fails to route through dialog route, but cleanup_bye works
+
+[ ] gNMI with grpc and path modeling for metrics instead of rawdogging socket jsondump
+Note: blocked trying to setup gNMI packages for python image, pip install works but then crashes for import during runtime
+
+----  ----
