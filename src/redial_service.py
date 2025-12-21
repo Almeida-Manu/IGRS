@@ -225,13 +225,24 @@ def handle_invite():
 
     kamailio.info(f'INVITE: Attempt {caller} -> {callee}\n')
 
-    # Block if callee already OnCall
+    # Block if callee is not Available
     callee_data_str = kamailio.htable.sht_get(HT_AOR, callee)
     if callee_data_str:
         t_data = json.loads(callee_data_str)
-        if t_data.get('status') == 'OnCall':
-            kamailio.info(f'INVITE: {callee} is OnCall\n')
+        callee_status = t_data.get('status')
+        if callee_status != 'Available':
+            kamailio.info(f'INVITE: {callee} is {callee_status}\n')
             kamailio.sl.send_reply(486, 'Busy Here')
+            return 1
+    
+    # Block if caller is not Available (error by spam preventation)
+    caller_data_str = kamailio.htable.sht_get(HT_AOR, caller)
+    if caller_data_str:
+        t_data = json.loads(caller_data_str)
+        caller_status = t_data.get('status')
+        if caller_status != 'Available':
+            kamailio.info(f'INVITE: {caller} is {caller_status}\n')
+            kamailio.sl.send_reply(403, 'Forbidden Multiple Calls Detected')
             return 1
 
     # Check if Caller has Callee in their Redial List
@@ -244,17 +255,19 @@ def handle_invite():
         if callee in caller_data.get('targets', []):
             # Redial arming
             kamailio.pv.seti('$avp(redial_count)', 0)
+            kamailio.tm.t_on_failure('app_redial_route')
+        else:
             kamailio.tm.t_on_failure('app_failure_route')
 
     # TODO: is this code wrong, and why dial_end is not triggering?
-    kamailio.setflag(4)
-
-    kamailio.pv.sets('$dlg_var(caller)', caller)
-    kamailio.pv.sets('$dlg_var(callee)', callee)
+    # kamailio.pv.sets('$dlg_var(caller)', caller)
+    # kamailio.pv.sets('$dlg_var(callee)', callee)
+    # kamailio.setflag(4)
+    # kamailio.dialog.dlg_manage()
 
     # Block incoming calls for involved users during the INVITE process
-    update_user_status(caller, 'OnCall')
-    update_user_status(callee, 'OnCall')
+    update_user_status(caller, 'RoutingCall')
+    update_user_status(callee, 'RoutingCall')
 
     kamailio.registrar.lookup('location')
     kamailio.tm.t_relay()
@@ -262,10 +275,10 @@ def handle_invite():
 
 
 def cleanup_on_bye(msg):
-    # caller = kamailio.pv.get('$fU')
-    # callee = kamailio.pv.get('$tU')
-    caller = kamailio.pv.get('$dlg_var(caller)')
-    callee = kamailio.pv.get('$dlg_var(callee)')
+    caller = kamailio.pv.get('$fU')
+    callee = kamailio.pv.get('$tU')
+    # caller = kamailio.pv.get('$dlg_var(caller)')
+    # callee = kamailio.pv.get('$dlg_var(callee)')
 
     kamailio.info(f'DIALOG: Ended {caller} <-> {callee}\n')
 
@@ -276,16 +289,13 @@ def cleanup_on_bye(msg):
 
 
 # TODO: this is not triggering, why?
-def dlg_end(msg):
-    caller = kamailio.pv.get('$dlg_var(caller)')
-    callee = kamailio.pv.get('$dlg_var(callee)')
-
-    kamailio.info(f'DIALOG: Ended {caller} <-> {callee}\n')
-
-    update_user_status(caller, 'Available')
-    update_user_status(callee, 'Available')
-
-    return 1
+# def dlg_end(msg):
+# caller = kamailio.pv.get('$dlg_var(caller)')
+# callee = kamailio.pv.get('$dlg_var(callee)')
+# kamailio.info(f'DIALOG: Ended {caller} <-> {callee}\n')
+# update_user_status(caller, 'Available')
+# update_user_status(callee, 'Available')
+# return 1
 
 
 def app_reply_route(msg):
@@ -293,11 +303,9 @@ def app_reply_route(msg):
 
     # Detect Call Answer (200 OK to INVITE)
     if reply_status == '200':
-        caller = kamailio.pv.get('$dlg_var(caller)')
-        callee = kamailio.pv.get('$dlg_var(callee)')
-
+        caller = kamailio.pv.get('$fU')
+        callee = kamailio.pv.get('$tU')
         kamailio.info(f'DIALOG: Established {caller} <-> {callee}\n')
-
         # Block users from receiving calls during a live call
         update_user_status(caller, 'OnCall')
         update_user_status(callee, 'OnCall')
@@ -305,7 +313,7 @@ def app_reply_route(msg):
     return 1
 
 
-def app_failure_route(msg):
+def app_redial_route(msg):
     # Catch error codes matching for redial service
     failure_status = '500'
     if kamailio.tm.t_check_status('486'):
@@ -350,7 +358,7 @@ def app_failure_route(msg):
             )
 
             # Rearm redial failure route
-            kamailio.tm.t_on_failure('app_failure_route')
+            kamailio.tm.t_on_failure('app_redial_route')
             kamailio.registrar.lookup('location')
             kamailio.tm.t_relay()
 
@@ -359,12 +367,53 @@ def app_failure_route(msg):
             kamailio.info('SERVICE: Max redials reached. Giving up.\n')
 
     # Freeup users for calls
-    caller = kamailio.pv.get('$dlg_var(caller)')
-    callee = kamailio.pv.get('$dlg_var(callee)')
+    # caller = kamailio.pv.get('$dlg_var(caller)')
+    # callee = kamailio.pv.get('$dlg_var(callee)')
+    caller = kamailio.pv.get('$fU')
+    callee = kamailio.pv.get('$tU')
     update_user_status(caller, 'Available')
     update_user_status(callee, 'Available')
 
     return 1
+
+
+def app_failure_route(msg):
+    # Catch error codes matching for redial service
+    failure_status = '500'
+    if kamailio.tm.t_check_status('486'):
+        failure_status = '486'
+    elif kamailio.tm.t_check_status('408'):
+        failure_status = '408'
+    elif kamailio.tm.t_check_status('480'):
+        failure_status = '480'
+    elif kamailio.tm.t_check_status('500'):
+        failure_status = '500'
+    elif kamailio.tm.t_check_status('503'):
+        failure_status = '503'
+    elif kamailio.tm.t_check_status('603'):
+        failure_status = '603'
+    else:
+        code = kamailio.pv.get('$T_reply_code')
+        if code:
+            failure_status = str(code)
+
+    should_redial = False
+    if failure_status in ['408', '480', '500', '503']:
+        kamailio.info(f'FAILURE: Network/Timeout error ({failure_status})\n')
+    elif failure_status == '486':
+        kamailio.info('FAILURE: Destination Busy (486)\n')
+    elif failure_status == '603':
+        kamailio.info('FAILURE: Destination Blocked (603)\n')
+
+    caller = kamailio.pv.get('$fU')
+    callee = kamailio.pv.get('$tU')
+    update_user_status(caller, 'Available')
+    update_user_status(callee, 'Available')
+
+    return 1
+
+
+# ----  ----
 
 
 # ----  ----
