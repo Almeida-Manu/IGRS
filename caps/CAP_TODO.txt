@@ -14,7 +14,7 @@
 
 [x] 8. Message ACTIVATE user not found, failure
 
-[ ] 9. Message DEACTIVATE
+[x] 9. Message DEACTIVATE
 
 [x] 10. Call busy no redial
 
