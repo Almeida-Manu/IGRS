@@ -1,0 +1,22 @@
+[ ] 1. Register working valid domain, success
+
+[ ] 2. Register not working for invalid domain, failure
+
+[ ] 3. Deregister working valid domain, success
+
+[ ] 4. Deregister not working for invalid domain, failure
+
+[ ] 5. Fail call to domain not registered, failure
+
+[ ] 6. Message ACTIVATE user is valid, success
+
+[ ] 7. Message ACTIVATE list too big, failure
+
+[ ] 8. Message ACTIVATE user not found, failure
+
+[ ] 9. Call busy no redial
+
+[ ] 10. Call busy do perform redial with busy every time
+
+[ ] 11. Call busy do perform redial with pick up at 2nd redial
+
