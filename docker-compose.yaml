@@ -39,15 +39,20 @@ services:
     command: /usr/bin/python3 /gnmi_agent.py
 
   acme_terminal:
-    image: rodrigolf80/igrs:05
+    image: rodrigolf80/igrs_terminal:latest
     container_name: acme_terminal
     networks:
       - acmenet
     hostname: acme.terminal
     environment:
-      - DISPLAY=host.docker.internal:0
+      - RESOLUTION=1280x640
+      - DISPLAY=$DISPLAY
     ports:
       - "5900:5900"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    ipc: host
+    privileged: true
     depends_on:
       - acme_operador
     restart: unless-stopped

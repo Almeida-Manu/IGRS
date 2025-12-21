@@ -1,5 +1,3 @@
-[ ] fix redial app_failure_route
-[ ] test 3rd person call when first 2 are already OnCall
-[ ] Cleanup code struct + comments 
+[ ] Fix dialog call instead of cleanup_bye
 
 [ ] Valid gNMI path modeling for metrics instead of rawdogging socket jsondump
