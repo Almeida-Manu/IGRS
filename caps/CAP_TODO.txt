@@ -12,7 +12,7 @@
 
 [x] 7. Message ACTIVATE list too big, failure
 
-[ ] 8. Message ACTIVATE user not found, failure
+[x] 8. Message ACTIVATE user not found, failure
 
 [ ] 9. Message DEACTIVATE
 
