@@ -1,5 +1,5 @@
-[ ] redial ACTIVATE / DEACTIVATE should be like Alice ACTIVATE bob and now bob can redial on alice using failure route, so we need a target list for active users, not a state active/inactive
+[ ] fix redial app_failure_route
+[ ] test 3rd person call when first 2 are already OnCall
+[ ] Cleanup code struct + comments 
 
 [ ] Valid gNMI path modeling for metrics instead of rawdogging socket jsondump
-
-[ ] Cleanup code struct + comments 

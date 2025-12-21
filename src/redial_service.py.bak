@@ -45,7 +45,7 @@ def update_kpi(kpi_name, delta):
 
 # ---- Default Initialisation ----
 def mod_init():
-    kamailio.info('Redial 2.0 Service Loaded\n')
+    kamailio.info('Redial 2.0 Service Loaded')
     try:
         if kamailio.htable.sht_get(HT_KPI, 'total_activations') is None:
             kamailio.htable.sht_sets(HT_KPI, 'total_activations', '0')
@@ -74,6 +74,8 @@ def sip_route(msg):
         kamailio.warn(f'ROUTE: Blocked access from {from_domain}\n')
         kamailio.sl.send_reply(403, 'Forbidden - Domain Not Allowed')
         return 1
+
+    # TODO: check is from_domain user service is ACTIVE
 
     # Routing logic per method
     method = kamailio.pv.get('$rm')
@@ -129,6 +131,7 @@ def handle_register():
     return 1
 
 
+# TODO: add test for ACTIVATE/DEACTIVATE in test container
 def handle_message():
     r_user = kamailio.pv.get('$rU')
     f_user = kamailio.pv.get('$fU')
@@ -160,11 +163,7 @@ def handle_message():
             kamailio.sl.send_reply(400, f'Maximum size for redial list exceeded with this call ({MAX_REDIAL_LIST})')
             return -1
 
-        # Check if all targets exist in the AOR table
-        for target in targets:
-            if not kamailio.htable.sht_get(HT_AOR, target):
-                kamailio.sl.send_reply(400, f'Target user "{target}" not found / not registered')
-                return -1
+        # TODO: maybe check if user exists in aor table otherwise return user not found
 
         if user_data.get('state') != 'Active':
             update_kpi('active_users_now', 1)
@@ -212,9 +211,7 @@ def handle_invite():
     caller_data_str = kamailio.htable.sht_get(HT_AOR, caller)
     if caller_data_str:
         caller_data = json.loads(caller_data_str)
-        kamailio.info(
-            f'ARM: {callee} for {caller} target list ({" ".join(target for target in caller_data.get("targets"))})\n'
-        )
+        kamailio.info(f'ARM: {callee} for {caller} target list {caller_data.get("targets"), []}')
         if callee in caller_data.get('targets', []):
             # Redial arming
             kamailio.pv.seti('$avp(redial_count)', 0)
@@ -278,34 +275,20 @@ def app_reply_route(msg):
 
 
 def app_failure_route(msg):
-    failure_status = '500'
-    if kamailio.tm.t_check_status('486'):
-        failure_status = '486'
-    elif kamailio.tm.t_check_status('408'):
-        failure_status = '408'
-    elif kamailio.tm.t_check_status('480'):
-        failure_status = '480'
-    elif kamailio.tm.t_check_status('500'):
-        failure_status = '500'
-    elif kamailio.tm.t_check_status('503'):
-        failure_status = '503'
-    elif kamailio.tm.t_check_status('603'):
-        failure_status = '603'
-    else:
-        code = kamailio.pv.get('$T_reply_code')
-        if code:
-            failure_status = str(code)
+    rs_code = kamailio.pv.get('$rs')
+    
+    failure_status = str(rs_code) if rs_code else '500'
 
     should_redial = False
+
+    # Redial on Network Errors (408, 480, 500, 503)
+    # Also redial on call reject/busy (486)
     if failure_status in ['408', '480', '500', '503']:
         should_redial = True
         kamailio.info(f'FAILURE: Network/Timeout error ({failure_status})\n')
     elif failure_status == '486':
-        should_redial = True
         kamailio.info('FAILURE: Destination Busy (486)\n')
-    elif failure_status == '603':
         should_redial = True
-        kamailio.info('FAILURE: Destination Blocked (603)\n')
 
     if should_redial:
         count_obj = kamailio.pv.get('$avp(redial_count)')
@@ -313,7 +296,6 @@ def app_failure_route(msg):
 
         if count < MAX_REDIALS:
             count += 1
-
             kamailio.pv.seti('$avp(redial_count)', count)
             kamailio.info(f'SERVICE: Redialing attempt {count}/{MAX_REDIALS}...\n')
 
