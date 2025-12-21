@@ -8,7 +8,7 @@
 
 [x] 5. Fail call to domain not registered, failure
 
-[ ] 6. Message ACTIVATE user is valid, success
+[x] 6. Message ACTIVATE user is valid, success
 
 [ ] 7. Message ACTIVATE list too big, failure
 
