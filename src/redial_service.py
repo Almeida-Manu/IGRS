@@ -174,24 +174,25 @@ def handle_message():
     # Handle ACTIVATE
     if command == 'ACTIVATE':
         targets = cmd_parts[1:]
-        if len(targets) > MAX_REDIAL_LIST:
+        if len(targets) + len(user_data['targets']) > MAX_REDIAL_LIST:
             kamailio.sl.send_reply(
                 400,
                 f'Maximum size for redial list exceeded with this call ({MAX_REDIAL_LIST})',
             )
             return -1
+        
+        if :
+            update_kpi('active_users_now', 1)
+            update_kpi('total_activations', len(targets))
 
         # Check if all targets exist in the AOR table
+        # Lookup targets in table, if they don't exist it returns None
         for target in targets:
             if not kamailio.htable.sht_get(HT_AOR, target):
                 kamailio.sl.send_reply(
                     400, f'Target user "{target}" not found / not registered'
                 )
                 return -1
-
-        if user_data.get('state') != 'Active':
-            update_kpi('active_users_now', 1)
-            update_kpi('total_activations', len(targets))
 
         # Perform htable col targets update
         user_data['targets'] = targets
@@ -397,7 +398,6 @@ def app_failure_route(msg):
         if code:
             failure_status = str(code)
 
-    should_redial = False
     if failure_status in ['408', '480', '500', '503']:
         kamailio.info(f'FAILURE: Network/Timeout error ({failure_status})\n')
     elif failure_status == '486':
