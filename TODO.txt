@@ -6,6 +6,9 @@ Note: quick and easy
 [ ] Move current code to dev branch, and cleanup commented parts on main branch before delivery
 Note: quick and easy
 
+[ ] Organise trello task planning with team
+Note: quick and easy
+
 ----  ----
 
 
@@ -13,8 +16,12 @@ Note: quick and easy
 
 [ ] Fix dialog module for calls instead of manual cleanup_bye
 Note: maybe some function from the module needs to be run in cfg or python service that is missing currently? Tried plenty always fails to route through dialog route, but cleanup_bye works
+Check labs code for dialog usage.
+Check if nickvsnetworking as something about it.
 
 [ ] gNMI with grpc and path modeling for metrics instead of rawdogging socket jsondump
 Note: blocked trying to setup gNMI packages for python image, pip install works but then crashes for import during runtime
+Check labs code for dialog usage.
+Check if nickvsnetworking as something about it.
 
 ----  ----
