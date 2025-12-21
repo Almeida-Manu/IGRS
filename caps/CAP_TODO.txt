@@ -6,7 +6,7 @@
 
 [x] 4. Deregister not working for invalid domain, failure
 
-[ ] 5. Fail call to domain not registered, failure
+[x] 5. Fail call to domain not registered, failure
 
 [ ] 6. Message ACTIVATE user is valid, success
 
