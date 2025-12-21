@@ -37,7 +37,9 @@ def parse_kamcmd_output(raw_text):
     """
     data = {}
 
-    pattern = re.compile(r'name:\s+(?P<key>\S+)\s+value:\s+(?P<val>.*?)\s+type:', re.DOTALL)
+    pattern = re.compile(
+        r'name:\s+(?P<key>\S+)\s+value:\s+(?P<val>.*?)\s+type:', re.DOTALL
+    )
 
     matches = pattern.finditer(raw_text)
 
@@ -63,7 +65,12 @@ def main():
     time.sleep(UPDATE_TIME)
 
     while True:
-        telemetry_data = {'timestamp': time.time(), 'source': 'acme.operador', 'system': 'redial_2.0', 'metrics': {}}
+        telemetry_data = {
+            'timestamp': time.time(),
+            'source': 'acme.operador',
+            'system': 'redial_2.0',
+            'metrics': {},
+        }
 
         for table_kamailio, label_json in TABLES.items():
             telemetry_data['metrics'][label_json] = fetch_table(table_kamailio)
