@@ -180,7 +180,7 @@ def handle_message():
                 f'Maximum size for redial list exceeded with this call ({MAX_REDIAL_LIST})',
             )
             return -1
-        
+
         # Update KPIs if activating redial service
         if len(user_data['targets']) == 0:
             update_kpi('active_users_now', 1)
@@ -227,8 +227,16 @@ def handle_invite():
 
     kamailio.info(f'INVITE: Attempt {caller} -> {callee}\n')
 
-    # Block if callee is not Available
+
     callee_data_str = kamailio.htable.sht_get(HT_AOR, callee)
+    
+    # Block if callee is not found in AoR table
+    if not callee_data_str:
+        kamailio.info(f'INVITE: {callee} was not found\n')
+        kamailio.sl.send_reply(404, 'User not found')
+        return 1
+
+    # Block if callee is not Available
     if callee_data_str:
         t_data = json.loads(callee_data_str)
         callee_status = t_data.get('status')
