@@ -181,7 +181,8 @@ def handle_message():
             )
             return -1
         
-        if :
+        # Update KPIs if activating redial service
+        if len(user_data['targets']) == 0:
             update_kpi('active_users_now', 1)
             update_kpi('total_activations', len(targets))
 
@@ -235,7 +236,7 @@ def handle_invite():
             kamailio.info(f'INVITE: {callee} is {callee_status}\n')
             kamailio.sl.send_reply(486, 'Busy Here')
             return 1
-    
+
     # Block if caller is not Available (error by spam preventation)
     caller_data_str = kamailio.htable.sht_get(HT_AOR, caller)
     if caller_data_str:
