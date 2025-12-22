@@ -7,7 +7,7 @@ import KSR as kamailio
 ACME_DOMAIN = 'acme.operador'
 MAX_REDIALS = 3
 MAX_REDIAL_LIST = 5
-# Htable
+# Htables
 HT_AOR = 'aor'
 HT_KPI = 'kpi'
 # ----  ----
@@ -69,7 +69,7 @@ def child_init(rank):
 
 # ---- Routing ----
 # Main route for SIP connections
-def sip_route(msg):
+def app_main_route(msg):
     # Block external domain traffic
     from_domain = kamailio.pv.get('$fd')
     to_domain = kamailio.pv.get('$rd')
@@ -97,7 +97,7 @@ def sip_route(msg):
     elif method == 'BYE':
         return handle_bye()
 
-    kamailio.sl.send_reply(405, 'Method Not Allowed')
+    kamailio.sl.send_reply(501, 'Not Implemented')
     return 1
 
 
@@ -194,9 +194,15 @@ def handle_message():
                     400, f'Target user "{target}" not found / not registered'
                 )
                 return -1
+        
+
 
         # Perform htable col targets update
-        user_data['targets'] = targets
+        for target in targets:
+            # Check if new targets are already in user targets list
+            if target not in user_data['targets']:
+                # Add new target to user targets list
+                user_data['targets'].append(target)
         kamailio.htable.sht_sets(HT_AOR, f_user, json.dumps(user_data))
         kamailio.info(f'SERVICE: {f_user} Activated Redial for {targets}\n')
         kamailio.sl.send_reply(200, 'Service Update Activated')
@@ -227,9 +233,8 @@ def handle_invite():
 
     kamailio.info(f'INVITE: Attempt {caller} -> {callee}\n')
 
-
     callee_data_str = kamailio.htable.sht_get(HT_AOR, callee)
-    
+
     # Block if callee is not found in AoR table
     if not callee_data_str:
         kamailio.info(f'INVITE: {callee} was not found\n')
@@ -269,12 +274,6 @@ def handle_invite():
         else:
             kamailio.tm.t_on_failure('app_failure_route')
 
-    # TODO: is this code wrong, and why dial_end is not triggering?
-    # kamailio.pv.sets('$dlg_var(caller)', caller)
-    # kamailio.pv.sets('$dlg_var(callee)', callee)
-    # kamailio.setflag(4)
-    # kamailio.dialog.dlg_manage()
-
     # Block incoming calls for involved users during the INVITE process
     update_user_status(caller, 'RoutingCall')
     update_user_status(callee, 'RoutingCall')
@@ -287,8 +286,6 @@ def handle_invite():
 def cleanup_on_bye(msg):
     caller = kamailio.pv.get('$fU')
     callee = kamailio.pv.get('$tU')
-    # caller = kamailio.pv.get('$dlg_var(caller)')
-    # callee = kamailio.pv.get('$dlg_var(callee)')
 
     kamailio.info(f'DIALOG: Ended {caller} <-> {callee}\n')
 
@@ -296,16 +293,6 @@ def cleanup_on_bye(msg):
     update_user_status(callee, 'Available')
 
     return 1
-
-
-# TODO: this is not triggering, why?
-# def dlg_end(msg):
-# caller = kamailio.pv.get('$dlg_var(caller)')
-# callee = kamailio.pv.get('$dlg_var(callee)')
-# kamailio.info(f'DIALOG: Ended {caller} <-> {callee}\n')
-# update_user_status(caller, 'Available')
-# update_user_status(callee, 'Available')
-# return 1
 
 
 def app_reply_route(msg):
@@ -316,6 +303,7 @@ def app_reply_route(msg):
         caller = kamailio.pv.get('$fU')
         callee = kamailio.pv.get('$tU')
         kamailio.info(f'DIALOG: Established {caller} <-> {callee}\n')
+
         # Block users from receiving calls during a live call
         update_user_status(caller, 'OnCall')
         update_user_status(callee, 'OnCall')
@@ -377,8 +365,6 @@ def app_redial_route(msg):
             kamailio.info('SERVICE: Max redials reached. Giving up.\n')
 
     # Freeup users for calls
-    # caller = kamailio.pv.get('$dlg_var(caller)')
-    # callee = kamailio.pv.get('$dlg_var(callee)')
     caller = kamailio.pv.get('$fU')
     callee = kamailio.pv.get('$tU')
     update_user_status(caller, 'Available')
@@ -420,9 +406,6 @@ def app_failure_route(msg):
     update_user_status(callee, 'Available')
 
     return 1
-
-
-# ----  ----
 
 
 # ----  ----
