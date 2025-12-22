@@ -3,4 +3,3 @@ Note: maybe some function from the module needs to be run in cfg or python servi
 
 [ ] gNMI with grpc and path modeling for metrics instead of rawdogging socket jsondump
 Note: blocked trying to setup gNMI packages for python image, pip install works but then crashes for import during runtime
-Check if nickvsnetworking as something about it.
