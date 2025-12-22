@@ -106,7 +106,15 @@ def handle_ack():
 
 
 def handle_cancel():
-    return kamailio.tm.t_relay()
+    caller = kamailio.pv.get('$fU')
+    callee = kamailio.pv.get('$rU')
+
+    kamailio.info(f'CANCEL: Resetting status for {caller} and {callee}\n')
+    update_user_status(caller, 'Available')
+    update_user_status(callee, 'Available')
+
+    kamailio.tm.t_relay()
+    return 1
 
 
 def handle_bye():
@@ -158,7 +166,12 @@ def handle_message():
         kamailio.sl.send_reply(400, 'Empty Body')
         return -1
 
-    cmd_parts = body.strip().split()
+    try:
+        cmd_parts = body.strip().split()
+    except Exception as e:
+        kamailio.sl.send_reply(400, 'Invalid Body')
+        return -1
+
     if not cmd_parts:
         kamailio.sl.send_reply(400, 'Empty Command')
         return -1
@@ -194,8 +207,6 @@ def handle_message():
                     400, f'Target user "{target}" not found / not registered'
                 )
                 return -1
-        
-
 
         # Perform htable col targets update
         for target in targets:
