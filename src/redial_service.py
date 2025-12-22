@@ -153,12 +153,11 @@ def handle_register():
 
 
 def handle_message():
-    r_user = kamailio.pv.get('$rU')
-    f_user = kamailio.pv.get('$fU')
+    user = kamailio.pv.get('$fU')
     body = kamailio.pv.get('$rb')
 
     # Message to redial@acme.operador
-    if r_user != 'redial':
+    if kamailio.pv.get('$rU') != 'redial':
         kamailio.sl.send_reply(403, 'Forbidden destination for MESSAGE')
         return -1
 
@@ -168,73 +167,80 @@ def handle_message():
 
     try:
         cmd_parts = body.strip().split()
-    except Exception as e:
-        kamailio.sl.send_reply(400, 'Invalid Body')
-        return -1
 
-    if not cmd_parts:
-        kamailio.sl.send_reply(400, 'Empty Command')
-        return -1
-    command = cmd_parts[0].upper()
-
-    # Check if user is registered
-    user_data_str = kamailio.htable.sht_get(HT_AOR, f_user)
-    if not user_data_str:
-        kamailio.sl.send_reply(403, 'User not registered')
-        return -1
-    user_data = json.loads(user_data_str)
-
-    # Handle ACTIVATE
-    if command == 'ACTIVATE':
-        targets = cmd_parts[1:]
-        if len(targets) + len(user_data['targets']) > MAX_REDIAL_LIST:
-            kamailio.sl.send_reply(
-                400,
-                f'Maximum size for redial list exceeded with this call ({MAX_REDIAL_LIST})',
-            )
+        if not cmd_parts:
+            kamailio.sl.send_reply(400, 'Empty Command')
             return -1
+        command = cmd_parts[0].upper()
 
-        # Update KPIs if activating redial service
-        if len(user_data['targets']) == 0:
-            update_kpi('active_users_now', 1)
-            update_kpi('total_activations', len(targets))
-
-        # Check if all targets exist in the AOR table
-        # Lookup targets in table, if they don't exist it returns None
-        for target in targets:
-            if not kamailio.htable.sht_get(HT_AOR, target):
+        # Check if user is registered
+        user_data_str = kamailio.htable.sht_get(HT_AOR, user)
+        if not user_data_str:
+            kamailio.sl.send_reply(403, 'User not registered')
+            return -1
+        user_data = json.loads(user_data_str)
+        current_targets = user_data['targets']
+        # Handle ACTIVATE
+        if command == 'ACTIVATE':
+            new_targets = cmd_parts[1:]
+            if len(new_targets) + len(current_targets) > MAX_REDIAL_LIST:
                 kamailio.sl.send_reply(
-                    400, f'Target user "{target}" not found / not registered'
+                    400,
+                    f'Maximum size for redial list exceeded with this call ({MAX_REDIAL_LIST})',
                 )
                 return -1
 
-        # Perform htable col targets update
-        for target in targets:
+            # Check if all targets exist in the AOR table
+            # Lookup targets in table, if they don't exist it returns None
+            for target in new_targets:
+                if not kamailio.htable.sht_get(HT_AOR, target):
+                    kamailio.sl.send_reply(
+                        400,
+                        f'Target user "{target}" not found / not registered',
+                    )
+                    return -1
+
             # Check if new targets are already in user targets list
-            if target not in user_data['targets']:
-                # Add new target to user targets list
-                user_data['targets'].append(target)
-        kamailio.htable.sht_sets(HT_AOR, f_user, json.dumps(user_data))
-        kamailio.info(f'SERVICE: {f_user} Activated Redial for {targets}\n')
-        kamailio.sl.send_reply(200, 'Service Update Activated')
+            # Add new target to user targets list
+            for target in new_targets:
+                if target not in current_targets:
+                    current_targets.append(target)
 
-    # Perform DEACTIVATE
-    elif command == 'DEACTIVATE':
-        if user_data.get('state') == 'Active':
-            update_kpi('active_users_now', -1)
+            # Perform htable col targets update
+            user_data['targets'] = current_targets
+            kamailio.htable.sht_sets(HT_AOR, user, json.dumps(user_data))
+            kamailio.info(
+                f'SERVICE: {user} Activated Redial for {new_targets}\n'
+            )
+            kamailio.sl.send_reply(200, 'Service Update Activated')
 
-        # Remove targets entry col as per requirements
-        user_data['targets'] = []
-        kamailio.htable.sht_sets(HT_AOR, f_user, json.dumps(user_data))
-        kamailio.info(f'SERVICE: {f_user} Deactivated Redial\n')
-        kamailio.sl.send_reply(200, 'Service Deactivated')
+            # Update KPIs if activating redial service
+            if len(user_data['targets']) == 0:
+                update_kpi('active_users_now', 1)
+                update_kpi('total_activations', len(targets))
 
-    else:
+        # Perform DEACTIVATE
+        elif command == 'DEACTIVATE':
+            if current_targets == []:
+                update_kpi('active_users_now', -1)
+
+            # Remove targets entry col as per requirements
+            user_data['targets'] = []
+            kamailio.htable.sht_sets(HT_AOR, f_user, json.dumps(user_data))
+            kamailio.info(f'SERVICE: {f_user} Deactivated Redial\n')
+            kamailio.sl.send_reply(200, 'Service Deactivated')
+
+        else:
+            kamailio.sl.send_reply(
+                400,
+                'Unknown Command - valid: [ACTIVATE / DEACTIVATE <user_1> <user_2> ...], maximum list size ({MAX_REDIAL_LIST})',
+            )
+    except Exception as e:
+        kamailio.info(f'MESSAGE: {e}')
         kamailio.sl.send_reply(
             400,
-            'Unknown Command - valid: [ACTIVATE / DEACTIVATE <user_1> <user_2> ...], maximum list size ({MAX_REDIAL_LIST})',
+            'Invalid body sent - valid: [ACTIVATE / DEACTIVATE <user_1> <user_2> ...], maximum list size ({MAX_REDIAL_LIST})',
         )
-
     return 1
 
 
